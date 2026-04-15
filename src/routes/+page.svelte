@@ -3,6 +3,8 @@
 	import { SOCIALS } from '$lib/constants';
 </script>
 
+<div class="fixed inset-0 -z-10 bg-[url('/riverbank.png')] bg-cover bg-center"></div>
+
 <div class="grid h-screen w-screen px-4">
 	<div class="flex flex-col place-content-center items-center">
 		<enhanced:img src="$lib/assets/img/meowcha.webp" class="text-st -mb-24 max-w-90" />
@@ -23,7 +25,7 @@
 				<span class="font-bold text-red-400">Matcha</span>. Remember that!
 			</p>
 		</div>
-		<div class="mt-4 flex items-center gap-4">
+		<div class="mt-4 flex flex-wrap items-center justify-center gap-4">
 			{#each SOCIALS as { href, icon, name }, i (i)}
 				<Button text={name} as="a" rel="external" {icon} {href} />
 			{/each}

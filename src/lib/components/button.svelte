@@ -20,7 +20,7 @@
 {#if as === 'a' && !rel && href}
 	<a
 		href={resolve(href as RouteId)}
-		class="flex items-center justify-center gap-2 rounded-lg border-3 border-custom-black px-4 py-2 text-center"
+		class="flex items-center justify-center gap-2 rounded-lg border-3 border-custom-black bg-white px-4 py-2 text-center whitespace-nowrap"
 	>
 		<img src={icon} width={24} height={24} alt={text} />
 		{text}
@@ -30,14 +30,14 @@
 		{href}
 		rel="external"
 		target="_blank"
-		class="flex items-center justify-center gap-2 rounded-lg border-3 border-custom-black px-4 py-2 text-center"
+		class="flex items-center justify-center gap-2 rounded-lg border-3 border-custom-black bg-white px-4 py-2 text-center whitespace-nowrap"
 	>
 		<img src={icon} width={24} height={24} alt={text} />
 		{text}
 	</a>
 {:else}
 	<button
-		class="flex items-center justify-center gap-2 rounded-lg border-3 border-custom-black px-4 py-2 text-center"
+		class="flex items-center justify-center gap-2 rounded-lg border-3 border-custom-black bg-white px-4 py-2 text-center whitespace-nowrap"
 		{onclick}
 	>
 		<img src={icon} width={24} height={24} alt={text} />
