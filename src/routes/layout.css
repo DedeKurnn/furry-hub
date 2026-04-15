@@ -1,3 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Modak&family=Sniglet:wght@400;800&display=swap');
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+@theme {
+	--font-display: 'Modak', sans-serif;
+	--font-bagel: 'Bagel Fat One', sans-serif;
+	--font-sniglet: 'Sniglet', sans-serif;
+
+	--color-primary-100: #8aa624;
+	--color-primary-50: #dbe4c9;
+	--color-secondary-100: #fea405;
+	--color-tertiary: #fffff0;
+	--color-custom-black: #1a1a19;
+}
+
+@layer base {
+	p,
+	a,
+	button {
+		@apply font-sniglet;
+	}
+}
+
+@layer components {
+	.display-stroke {
+		-webkit-text-stroke: 28px var(--color-primary-50);
+		paint-order: stroke fill;
+	}
+}
