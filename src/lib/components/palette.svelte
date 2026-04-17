@@ -30,7 +30,7 @@
 		}
 	}}
 >
-	<iconify-icon class={`text-6xl ${color}`} icon="boxicons:cat-filled"></iconify-icon>
+	<iconify-icon class={`text-5xl sm:text-6xl ${color}`} icon="boxicons:cat-filled"></iconify-icon>
 
 	<div
 		class="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-black/50 px-2 py-1 font-sniglet text-xs whitespace-nowrap text-white opacity-0 transition group-hover:opacity-100"

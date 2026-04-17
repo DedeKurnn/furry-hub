@@ -37,7 +37,7 @@
 	<div class="mask-fade-x relative w-full outline-none">
 		<div class="fixed inset-0 -z-10 bg-[url('/riverbank.png')] bg-cover bg-center"></div>
 
-		<div class="ov grid h-screen w-full overflow-hidden px-4">
+		<div class="ov grid min-h-screen w-full overflow-hidden px-4">
 			<div class="flex flex-col place-content-center items-center">
 				<enhanced:img src={Meowcha} alt="Meowcha" class="text-st -mb-24 max-w-90" />
 				<div class="max-w-160 rounded-3xl border-4 border-primary-50 bg-white p-6">
@@ -95,16 +95,16 @@
 				<div class="grid grid-cols-5 gap-8">
 					<Card title="About" titleSize="md" customClass="col-span-3 -rotate-1"
 						><ul class="mt-4 space-y-1">
-							<li class="flex items-center gap-2">
+							<li class="flex flex-col sm:flex-row sm:items-center sm:gap-2">
 								<span class="font-bold">Species:</span> Domestic Cat (Green Edition)
 							</li>
-							<li class="flex items-center gap-2">
+							<li class="flex flex-col sm:flex-row sm:items-center sm:gap-2">
 								<span class="font-bold">Diet:</span> 90% Mocha, 10% Cauliflower
 							</li>
-							<li class="flex items-center gap-2">
+							<li class="flex flex-col sm:flex-row sm:items-center sm:gap-2">
 								<span class="font-bold">Enemy #1:</span> Matcha (taste like grass)
 							</li>
-							<li class="flex items-center gap-2">
+							<li class="flex flex-col sm:flex-row sm:items-center sm:gap-2">
 								<span class="font-bold">Stance:</span> Pro-Nature, Anti-Zionism
 							</li>
 						</ul>
@@ -118,7 +118,7 @@
 					</Card>
 				</div>
 			</div>
-			<div class="col-span-2">
+			<div class="col-span-3 sm:col-span-2">
 				<enhanced:img
 					src={MeowchaPortrait}
 					alt="Meowcha in Fursuit"

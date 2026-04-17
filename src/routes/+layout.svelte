@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import Footer from '$lib/components/footer.svelte';
 
 	let { children } = $props();
 
@@ -25,3 +26,4 @@
 		<a href={resolve(localizeHref(page.url.pathname, { locale }) as any)}>{locale}</a>
 	{/each}
 </div>
+<Footer />
