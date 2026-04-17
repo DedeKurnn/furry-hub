@@ -13,11 +13,29 @@
 	--color-secondary-100: #fea405;
 	--color-tertiary: #fffff0;
 	--color-custom-black: #1a1a19;
+
+	--color-meowcha-teal: #1b5a6c;
+	--color-meowcha-green: #98cd48;
+	--color-meowcha-yellow: #eed32f;
+	--color-meowcha-white: #fdf3e6;
+
+	--animate-wiggle: wiggle 0.6s ease-in-out infinite;
+
+	@keyframes wiggle {
+		0%,
+		100% {
+			transform: rotate(1deg);
+		}
+		50% {
+			transform: rotate(-1deg);
+		}
+	}
 }
 
 @layer base {
 	p,
 	a,
+	li,
 	button {
 		@apply font-sniglet;
 	}
@@ -26,6 +44,16 @@
 @layer components {
 	.display-stroke {
 		-webkit-text-stroke: 28px var(--color-primary-50);
+		paint-order: stroke fill;
+	}
+
+	.display-stroke-md {
+		-webkit-text-stroke: 20px var(--color-primary-50);
+		paint-order: stroke fill;
+	}
+
+	.display-stroke-sm {
+		-webkit-text-stroke: 12px var(--color-primary-50);
 		paint-order: stroke fill;
 	}
 }

@@ -1,45 +1,44 @@
-import Facebook from '$lib/assets/icons/facebook.webp';
-import Instagram from '$lib/assets/icons/instagram.webp';
-import Twitter from '$lib/assets/icons/twitter.webp';
-import TikTok from '$lib/assets/icons/tiktok.webp';
-import Telegram from '$lib/assets/icons/telegram.webp';
-import FurAffinity from '$lib/assets/icons/furaffinity.webp';
-import BARQ from '$lib/assets/icons/barq.webp';
-
 export const SOCIALS = [
 	{
 		name: 'Facebook',
 		href: 'https://facebook.com/meowchabrew',
-		icon: Facebook
+		icon: 'mingcute:facebook-fill'
 	},
 	{
 		name: 'Instagram',
 		href: 'https://instagram.com/meowchabrew',
-		icon: Instagram
+		icon: 'mingcute:instagram-fill'
 	},
 	{
 		name: 'Twitter',
 		href: 'https://twitter.com/meowchabrew',
-		icon: Twitter
+		icon: 'mingcute:twitter-fill'
 	},
 	{
 		name: 'TikTok',
 		href: 'https://tiktok.com/@meowchabrew',
-		icon: TikTok
+		icon: 'mingcute:tiktok-fill'
 	},
 	{
 		name: 'Telegram',
 		href: 'https://t.me/meowchabrew',
-		icon: Telegram
+		icon: 'mingcute:telegram-fill'
 	},
 	{
 		name: 'Fur Affinity',
 		href: 'https://www.furaffinity.net/user/meowchabrew',
-		icon: FurAffinity
+		icon: 'simple-icons:furaffinity'
 	},
 	{
 		name: 'BARQ!',
 		href: 'https://www.barq.app/meowchabrew',
-		icon: BARQ
+		icon: 'arcticons:barq'
 	}
+];
+
+export const PALETTE = [
+	{ color: 'text-meowcha-teal', hex: '#1b5a6c' },
+	{ color: 'text-meowcha-green', hex: '#98cd48' },
+	{ color: 'text-meowcha-yellow', hex: '#eed32f' },
+	{ color: 'text-meowcha-white', hex: '#fdf3e6' }
 ];

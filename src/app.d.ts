@@ -3,9 +3,12 @@
 declare global {
 	namespace App {
 		interface Platform {
-			env: Env;
+			env: {
+				FURRY_BUCKET: R2Bucket;
+				FURRY_MEDIA: ImagesBinding;
+			};
 			ctx: ExecutionContext;
-			caches: CacheStorage;
+			caches: CacheStorage & { default: Cache };
 			cf?: IncomingRequestCfProperties;
 		}
 

@@ -8,6 +8,18 @@
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"
 	},
+	"r2_buckets": [
+		{
+			"binding": "FURRY_BUCKET",
+			"bucket_name": "furry-hub"
+		}
+	],
+	"images": {
+		"binding": "FURRY_MEDIA"
+	},
+	"observability": {
+		"enabled": true
+	},
 	"workers_dev": true,
 	"preview_urls": true
 }
