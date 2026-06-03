@@ -80,7 +80,7 @@
 	<DottedPattern />
 </section>
 
-<section id="bio" class="bg-white px-4 pt-12 pb-24">
+<section id="bio" class="bg-white px-4 py-12">
 	<div class="mx-auto grid max-w-5xl place-content-center">
 		<div class="grid place-content-center gap-8 sm:grid-cols-5">
 			<div class="col-span-3 grid gap-8">

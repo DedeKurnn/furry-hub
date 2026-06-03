@@ -21,7 +21,7 @@
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 {@render children()}
 
-<div style="display:none">
+<div style="display:none; background-color: white;">
 	{#each locales as locale, i (i)}
 		<a href={resolve(localizeHref(page.url.pathname, { locale }) as any)}>{locale}</a>
 	{/each}
