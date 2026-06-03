@@ -5,6 +5,7 @@
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import Footer from '$lib/components/footer.svelte';
+	import Header from "$lib/components/header.svelte"
 
 	let { children } = $props();
 
@@ -13,7 +14,7 @@
 		'color: yellow; font-size: 24px; font-weight: bold;'
 	);
 	console.log(
-		"%c You\'re curious on how my website code look like huh? 👀",
+		"%c You're curious on how my website code look like huh? 👀",
 		'font-size: 18px; font-weight: bold;'
 	);
 </script>
@@ -21,6 +22,7 @@
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 {@render children()}
 
+<Header />
 <div style="display:none; background-color: white;">
 	{#each locales as locale, i (i)}
 		<a href={resolve(localizeHref(page.url.pathname, { locale }) as any)}>{locale}</a>
