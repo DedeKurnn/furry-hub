@@ -10,6 +10,7 @@
 	import { SOCIALS, PALETTE } from '$lib/constants';
 	import Palette from '$lib/components/palette.svelte';
 	import Card from '$lib/components/card.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	$effect(() => {
 		const lenis = new Lenis();
@@ -45,17 +46,16 @@
 						<p
 							class="display-stroke relative z-20 text-center font-display text-lg text-orange-500"
 						>
-							Welcome to
+							{m.hero_welcome_to()}
 						</p>
 						<h1
 							class="display-stroke relative z-10 text-center font-display text-3xl text-lime-500 sm:text-5xl"
 						>
-							Meowcha's Cat Tree
+							{m.hero_title()}
 						</h1>
 					</div>
 					<p class="mt-4 text-center">
-						Heyyowww! wellcome to the Cat Tree! I'm Meowcha, your favorite caffeinated green cat.
-						I'm here for the vibes on the little corner of the internet.
+						{m.hero_description()}
 					</p>
 				</div>
 				<div class="mt-4 flex flex-wrap items-center justify-center gap-4">
@@ -65,7 +65,7 @@
 				</div>
 				<div class="mt-4">
 					<Button
-						text="Commission me on VGen :3"
+						text={m.hero_vgen_button()}
 						customIcon={VGenLogo}
 						as="a"
 						rel="external"
@@ -84,32 +84,33 @@
 	<div class="mx-auto grid max-w-5xl place-content-center">
 		<div class="grid place-content-center gap-8 sm:grid-cols-5">
 			<div class="col-span-3 grid gap-8">
-				<Card title="Get to Know Me :3" titleSize="md" customClass="rotate-1">
+				<Card title={m.bio_card_title()} titleSize="md" customClass="rotate-1">
 					<p class="mt-4">
-						Yes, I'm green. Yes, my name has 'Meow' in it. But if you bring Matcha near me, we’re
-						going to have a problem! It’s pronounced Mocha (MOKA), like the coffee. I’m just a
-						domestic house cat who stayed in the forest a little too long and started matching the
-						scenery.
+						{m.bio_card_description()}
 					</p>
 				</Card>
 				<div class="grid grid-cols-5 gap-8">
-					<Card title="About" titleSize="md" customClass="col-span-3 -rotate-1"
+					<Card title={m.bio_about_title()} titleSize="md" customClass="col-span-3 -rotate-1"
 						><ul class="mt-4 space-y-1">
 							<li class="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-								<span class="font-bold">Species:</span> Domestic Cat (Green Edition)
+								<span class="font-bold">{m.bio_species()}</span>
+								{m.bio_species_value()}
 							</li>
 							<li class="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-								<span class="font-bold">Diet:</span> 90% Mocha, 10% Cauliflower
+								<span class="font-bold">{m.bio_diet()}</span>
+								{m.bio_diet_value()}
 							</li>
 							<li class="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-								<span class="font-bold">Enemy #1:</span> Matcha (taste like grass)
+								<span class="font-bold">{m.bio_enemy()}</span>
+								{m.bio_enemy_value()}
 							</li>
 							<li class="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-								<span class="font-bold">Stance:</span> Pro-Nature, Anti-Zionism
+								<span class="font-bold">{m.bio_stance()}</span>
+								{m.bio_stance_value()}
 							</li>
 						</ul>
 					</Card>
-					<Card title="Palette" titleSize="md" customClass="col-span-2 rotate-2">
+					<Card title={m.bio_palette_title()} titleSize="md" customClass="col-span-2 rotate-2">
 						<div class="mt-2 flex flex-wrap items-center justify-center gap-1">
 							{#each PALETTE as { color, hex }, i (i)}
 								<Palette {color} {hex} />
