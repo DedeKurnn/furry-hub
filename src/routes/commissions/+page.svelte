@@ -5,23 +5,20 @@
 		CommissionFormState,
 		CommissionPackage,
 		CommissionSubmissionPayload,
-		EyeStyle,
 		FingerCount,
 		FurColorCount,
+		FurType,
 		Marking,
-		MouthType,
 		PartType,
-		TailAddon,
 		TailSize,
-		BeltAttachment,
-		ArmSleeveAttachment,
-		ArmSleeveLength,
 		ArtisticLiberty
 	} from '$lib/types/commission';
 	import {
 		BASE_PRICES,
 		calculatePriceBreakdown,
 		getActiveParts,
+		detectBundleFromParts,
+		sanitizeFormState,
 		INITIAL_ARM_SLEEVES_DATA,
 		INITIAL_FORM_STATE,
 		INITIAL_HEAD_DATA,
@@ -49,6 +46,16 @@
 	let isSubmitted = $state(false);
 	let submissionPayload: CommissionSubmissionPayload | null = $state(null);
 	let copySuccess = $state(false);
+	let autoConvertNotice: string | null = $state(null);
+	let autoConvertTimer: any = null;
+
+	function showAutoConvertNotice(message: string) {
+		autoConvertNotice = message;
+		if (autoConvertTimer) clearTimeout(autoConvertTimer);
+		autoConvertTimer = setTimeout(() => {
+			autoConvertNotice = null;
+		}, 7000);
+	}
 
 	// Reactive derived active parts and price breakdown
 	const activeParts = $derived(getActiveParts(form.commissionPackage, form.selectedParts));
@@ -74,6 +81,27 @@
 			form.armSleeves = { ...INITIAL_ARM_SLEEVES_DATA };
 			clearArmSleeveErrors();
 		} else if (newPkg === 'per_parts') {
+			// Per parts: only local faux fur is allowed (imported not available)
+			if (form.general.furType === 'Imported furs') {
+				form.general.furType = 'Local faux fur';
+			}
+			delete errors.furType;
+
+			// If switching from a bundle package, reset selectedParts so user can select their desired custom parts
+			if (
+				(form.selectedParts.length === 4 &&
+					form.selectedParts.includes('head') &&
+					form.selectedParts.includes('paws') &&
+					form.selectedParts.includes('tail') &&
+					form.selectedParts.includes('arm_sleeves')) ||
+				(form.selectedParts.length === 3 &&
+					form.selectedParts.includes('head') &&
+					form.selectedParts.includes('paws') &&
+					form.selectedParts.includes('tail'))
+			) {
+				form.selectedParts = [];
+			}
+
 			// Per parts: only checked parts retain data, uncheck clears hidden parts
 			if (!form.selectedParts.includes('head')) {
 				form.head = { ...INITIAL_HEAD_DATA };
@@ -94,11 +122,13 @@
 		}
 	}
 
-	// State cleanup on individual part toggle
+	// State cleanup on individual part toggle + auto bundle conversion
 	function togglePart(part: PartType) {
 		const exists = form.selectedParts.includes(part);
+		let nextParts: PartType[];
+
 		if (exists) {
-			form.selectedParts = form.selectedParts.filter((p: PartType) => p !== part);
+			nextParts = form.selectedParts.filter((p: PartType) => p !== part);
 			// Clean hidden section values immediately
 			if (part === 'head') {
 				form.head = { ...INITIAL_HEAD_DATA };
@@ -114,45 +144,50 @@
 				clearArmSleeveErrors();
 			}
 		} else {
-			form.selectedParts = [...form.selectedParts, part];
+			nextParts = [...form.selectedParts, part];
 			delete errors.selectedParts;
 		}
+
+		// Automatic bundle conversion:
+		// head, paws, tail, arm_sleeves -> convert to Partial
+		// head, paws, tail -> convert to Mini Partial
+		const detectedBundle = detectBundleFromParts(nextParts);
+		if (detectedBundle === 'partial') {
+			form.commissionPackage = 'partial';
+			form.selectedParts = ['head', 'paws', 'tail', 'arm_sleeves'];
+			showAutoConvertNotice(
+				'Your selection includes all parts (Head, Paws, Tail, Arm Sleeves) and was automatically converted to the Partial bundle!'
+			);
+			return;
+		}
+
+		if (detectedBundle === 'mini_partial') {
+			form.commissionPackage = 'mini_partial';
+			form.selectedParts = ['head', 'paws', 'tail'];
+			form.armSleeves = { ...INITIAL_ARM_SLEEVES_DATA };
+			clearArmSleeveErrors();
+			showAutoConvertNotice(
+				'Your selection (Head, Paws, Tail) was automatically converted to the Mini Partial bundle!'
+			);
+			return;
+		}
+
+		form.selectedParts = nextParts;
 	}
 
 	function clearHeadErrors() {
-		delete errors.eyeStyle;
-		delete errors.mouthType;
 		delete errors.headCircumference;
 		delete errors.headHeight;
 	}
 
 	function clearTailErrors() {
 		delete errors.tailSize;
-		delete errors.beltAttachment;
 	}
 
 	function clearArmSleeveErrors() {
-		delete errors.attachmentStyle;
-		delete errors.sleeveLength;
 		delete errors.armLength;
 		delete errors.upperArmCircumference;
 		delete errors.wristWidth;
-	}
-
-	function toggleTailAddon(addon: TailAddon) {
-		if (form.tail.tailAddons.includes(addon)) {
-			form.tail.tailAddons = form.tail.tailAddons.filter((a: TailAddon) => a !== addon);
-		} else {
-			form.tail.tailAddons = [...form.tail.tailAddons, addon];
-		}
-	}
-
-	function toggleMarking(marking: Marking) {
-		if (form.general.markings.includes(marking)) {
-			form.general.markings = form.general.markings.filter((m: Marking) => m !== marking);
-		} else {
-			form.general.markings = [...form.general.markings, marking];
-		}
 	}
 
 	function handleFileUpload(event: Event) {
@@ -171,6 +206,9 @@
 
 	function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
+
+		// Sanitize form state first (handles auto-conversions if any)
+		form = sanitizeFormState(form);
 
 		const validation = validateCommissionForm(form);
 		if (!validation.isValid) {
@@ -200,6 +238,8 @@
 			general: { ...INITIAL_FORM_STATE.general }
 		};
 		errors = {};
+		autoConvertNotice = null;
+		if (autoConvertTimer) clearTimeout(autoConvertTimer);
 		isSubmitted = false;
 		submissionPayload = null;
 		copySuccess = false;
@@ -307,8 +347,16 @@
 						<strong>{submissionPayload.general.characterNameSpecies}</strong>
 					</p>
 					<p>
+						<span class="text-slate-500">Fur Type:</span>
+						<strong>{submissionPayload.general.furType}</strong>
+					</p>
+					<p>
 						<span class="text-slate-500">Fur Colors:</span>
 						<strong>{submissionPayload.general.furColorCount}</strong>
+					</p>
+					<p>
+						<span class="text-slate-500">Markings:</span>
+						<strong>{submissionPayload.general.markings || 'None'}</strong>
 					</p>
 					<p>
 						<span class="text-slate-500">Active Parts:</span>
@@ -344,8 +392,6 @@
 						<div class="rounded-xl border border-slate-200 bg-white p-3">
 							<strong>Head:</strong>
 							<ul class="mt-1 list-inside list-disc space-y-0.5 text-xs text-slate-600">
-								<li>Eye Style: {submissionPayload.head.eyeStyle}</li>
-								<li>Mouth: {submissionPayload.head.mouthType}</li>
 								<li>Circumference: {submissionPayload.head.headCircumference} cm</li>
 								<li>Height: {submissionPayload.head.headHeight} cm</li>
 								{#if submissionPayload.head.headAddons}
@@ -369,10 +415,6 @@
 							<strong>Tail:</strong>
 							<ul class="mt-1 list-inside list-disc space-y-0.5 text-xs text-slate-600">
 								<li>Size: {submissionPayload.tail.tailSize}</li>
-								<li>Attachment: {submissionPayload.tail.beltAttachment}</li>
-								{#if submissionPayload.tail.tailAddons.length > 0}
-									<li>Add-ons: {submissionPayload.tail.tailAddons.join(', ')}</li>
-								{/if}
 							</ul>
 						</div>
 					{/if}
@@ -381,8 +423,6 @@
 						<div class="rounded-xl border border-slate-200 bg-white p-3">
 							<strong>Arm Sleeves:</strong>
 							<ul class="mt-1 list-inside list-disc space-y-0.5 text-xs text-slate-600">
-								<li>Attachment: {submissionPayload.armSleeves.attachmentStyle}</li>
-								<li>Length: {submissionPayload.armSleeves.length}</li>
 								<li>Arm Length: {submissionPayload.armSleeves.armLength} cm</li>
 								<li>Upper Arm: {submissionPayload.armSleeves.upperArmCircumference} cm</li>
 								<li>Wrist Width: {submissionPayload.armSleeves.wristWidth} cm</li>
@@ -450,6 +490,31 @@
 								<li>{msg}</li>
 							{/each}
 						</ul>
+					</div>
+				{/if}
+
+				{#if autoConvertNotice}
+					<div
+						class="flex items-center justify-between rounded-2xl border-2 border-lime-400 bg-lime-50 p-4 text-lime-900 shadow-sm"
+						role="status"
+					>
+						<div class="flex items-center gap-3">
+							<span class="text-2xl">✨</span>
+							<div>
+								<p class="font-sniglet text-sm font-bold text-lime-800">
+									Automatic Bundle Conversion
+								</p>
+								<p class="font-sniglet text-xs text-lime-700">{autoConvertNotice}</p>
+							</div>
+						</div>
+						<button
+							type="button"
+							onclick={() => (autoConvertNotice = null)}
+							class="cursor-pointer px-2 py-1 font-sniglet text-xs font-bold text-slate-400 hover:text-slate-600"
+							aria-label="Dismiss notice"
+						>
+							✕
+						</button>
 					</div>
 				{/if}
 
@@ -612,6 +677,19 @@
 						<p class="mb-4 font-sniglet text-sm text-slate-600">
 							Check each part you would like to include in your commission:
 						</p>
+						<div class="mb-4 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+							<p class="font-sniglet text-xs text-amber-900">
+								💡 <strong>Bundle Note:</strong> Selecting <em>Head + Paws + Tail</em> will
+								automatically convert to the <strong>Mini Partial</strong> bundle, and selecting
+								<em>all 4 parts</em>
+								will automatically convert to the <strong>Partial</strong> bundle for better bundled pricing!
+							</p>
+						</div>
+						<div class="mb-4 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+							<p class="font-sniglet text-xs text-amber-900">
+								💡 <strong>Bundle Note:</strong> Selecting <em>Head + Paws + Tail</em> will automatically convert to the <strong>Mini Partial</strong> bundle, and selecting <em>all 4 parts</em> will automatically convert to the <strong>Partial</strong> bundle for better bundled pricing!
+							</p>
+						</div>
 
 						{#if errors.selectedParts}
 							<p class="mb-3 font-sniglet text-xs font-bold text-red-600">
@@ -760,76 +838,6 @@
 						</div>
 
 						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-							<!-- Eye Style -->
-							<div data-error={!!errors.eyeStyle}>
-								<span class="mb-1 block font-sniglet text-sm font-bold text-slate-700">
-									Eye Style <span class="text-red-500">*</span>
-								</span>
-								<div class="grid grid-cols-2 gap-2">
-									{#each ['2D Flat Eyes', '3D Follow-Me Eyes'] as EyeStyle[] as style}
-										<label
-											class={[
-												'cursor-pointer rounded-xl border-2 p-2.5 text-center font-sniglet text-xs font-bold transition-all',
-												form.head.eyeStyle === style
-													? 'border-lime-500 bg-lime-50 text-lime-800'
-													: 'border-slate-200 text-slate-600 hover:border-slate-300'
-											]}
-										>
-											<input
-												type="radio"
-												name="eyeStyle"
-												value={style}
-												checked={form.head.eyeStyle === style}
-												onchange={() => {
-													form.head.eyeStyle = style;
-													delete errors.eyeStyle;
-												}}
-												class="sr-only"
-											/>
-											{style}
-										</label>
-									{/each}
-								</div>
-								{#if errors.eyeStyle}
-									<p class="mt-1 font-sniglet text-xs text-red-500">{errors.eyeStyle}</p>
-								{/if}
-							</div>
-
-							<!-- Mouth Type -->
-							<div data-error={!!errors.mouthType}>
-								<span class="mb-1 block font-sniglet text-sm font-bold text-slate-700">
-									Mouth Type <span class="text-red-500">*</span>
-								</span>
-								<div class="grid grid-cols-2 gap-2">
-									{#each ['Static Open Mouth', 'Closed Mouth'] as MouthType[] as mouth}
-										<label
-											class={[
-												'cursor-pointer rounded-xl border-2 p-2.5 text-center font-sniglet text-xs font-bold transition-all',
-												form.head.mouthType === mouth
-													? 'border-lime-500 bg-lime-50 text-lime-800'
-													: 'border-slate-200 text-slate-600 hover:border-slate-300'
-											]}
-										>
-											<input
-												type="radio"
-												name="mouthType"
-												value={mouth}
-												checked={form.head.mouthType === mouth}
-												onchange={() => {
-													form.head.mouthType = mouth;
-													delete errors.mouthType;
-												}}
-												class="sr-only"
-											/>
-											{mouth}
-										</label>
-									{/each}
-								</div>
-								{#if errors.mouthType}
-									<p class="mt-1 font-sniglet text-xs text-red-500">{errors.mouthType}</p>
-								{/if}
-							</div>
-
 							<!-- Head Circumference (cm) -->
 							<div data-error={!!errors.headCircumference}>
 								<label
@@ -1014,76 +1022,6 @@
 									<p class="mt-1 font-sniglet text-xs text-red-500">{errors.tailSize}</p>
 								{/if}
 							</div>
-
-							<!-- Belt Attachment -->
-							<div data-error={!!errors.beltAttachment}>
-								<span class="mb-1 block font-sniglet text-sm font-bold text-slate-700">
-									Belt Attachment <span class="text-red-500">*</span>
-								</span>
-								<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-									{#each ['Elastic Belt Loops', 'Hidden Nylon Kidney Belt'] as BeltAttachment[] as belt}
-										<label
-											class={[
-												'cursor-pointer rounded-xl border-2 p-3 text-center font-sniglet text-sm font-bold transition-all',
-												form.tail.beltAttachment === belt
-													? 'border-lime-500 bg-lime-50 text-lime-800 shadow-sm'
-													: 'border-slate-200 text-slate-600 hover:border-slate-300'
-											]}
-										>
-											<input
-												type="radio"
-												name="beltAttachment"
-												value={belt}
-												checked={form.tail.beltAttachment === belt}
-												onchange={() => {
-													form.tail.beltAttachment = belt;
-													delete errors.beltAttachment;
-												}}
-												class="sr-only"
-											/>
-											{belt}
-										</label>
-									{/each}
-								</div>
-								{#if errors.beltAttachment}
-									<p class="mt-1 font-sniglet text-xs text-red-500">{errors.beltAttachment}</p>
-								{/if}
-							</div>
-
-							<!-- Tail Add-ons -->
-							<div>
-								<span class="mb-1 block font-sniglet text-sm font-bold text-slate-700">
-									Tail Add-ons <span class="text-xs font-normal text-slate-400"
-										>(optional, priced manually)</span
-									>
-								</span>
-								<div class="flex flex-wrap gap-3">
-									{#each ['Squeaker', 'Removable stuffing zipper/velcro'] as TailAddon[] as addon}
-										<button
-											type="button"
-											onclick={() => toggleTailAddon(addon)}
-											class={[
-												'flex cursor-pointer items-center gap-2 rounded-xl border-2 px-3 py-2 font-sniglet text-xs font-bold transition-all',
-												form.tail.tailAddons.includes(addon)
-													? 'border-lime-500 bg-lime-50 text-lime-800'
-													: 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-											]}
-										>
-											<span
-												class={[
-													'flex h-4 w-4 items-center justify-center rounded border text-xs',
-													form.tail.tailAddons.includes(addon)
-														? 'border-lime-600 bg-lime-500 text-white'
-														: 'border-slate-300'
-												]}
-											>
-												{#if form.tail.tailAddons.includes(addon)}✓{/if}
-											</span>
-											{addon}
-										</button>
-									{/each}
-								</div>
-							</div>
 						</div>
 					</section>
 				{/if}
@@ -1101,173 +1039,80 @@
 							</h3>
 						</div>
 
-						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-							<!-- Attachment Style -->
-							<div data-error={!!errors.attachmentStyle}>
-								<span class="mb-1 block font-sniglet text-sm font-bold text-slate-700">
-									Attachment Style <span class="text-red-500">*</span>
-								</span>
-								<div class="grid grid-cols-1 gap-2">
-									{#each ['Elastic Shoulder/Back Strap', 'Fitted Bicep Elastic'] as ArmSleeveAttachment[] as att}
-										<label
-											class={[
-												'flex cursor-pointer items-center gap-2 rounded-xl border-2 p-2.5 font-sniglet text-xs font-bold transition-all',
-												form.armSleeves.attachmentStyle === att
-													? 'border-lime-500 bg-lime-50 text-lime-800'
-													: 'border-slate-200 text-slate-600 hover:border-slate-300'
-											]}
-										>
-											<input
-												type="radio"
-												name="attachmentStyle"
-												value={att}
-												checked={form.armSleeves.attachmentStyle === att}
-												onchange={() => {
-													form.armSleeves.attachmentStyle = att;
-													delete errors.attachmentStyle;
-												}}
-												class="sr-only"
-											/>
-											<span
-												class={[
-													'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-xs',
-													form.armSleeves.attachmentStyle === att
-														? 'border-lime-600 bg-lime-500 text-white'
-														: 'border-slate-300'
-												]}
-											>
-												{#if form.armSleeves.attachmentStyle === att}✓{/if}
-											</span>
-											{att}
-										</label>
-									{/each}
+						<div>
+							<h4 class="mb-2 font-sniglet text-sm font-bold text-slate-800">
+								Arm Measurements (required)
+							</h4>
+							<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+								<div data-error={!!errors.armLength}>
+									<label
+										for="input-arm-length"
+										class="mb-1 block font-sniglet text-xs font-bold text-slate-600"
+									>
+										Arm Length (cm) <span class="text-red-500">*</span>
+									</label>
+									<input
+										id="input-arm-length"
+										type="number"
+										min="20"
+										max="100"
+										step="0.5"
+										placeholder="e.g. 55"
+										bind:value={form.armSleeves.armLength}
+										oninput={() => delete errors.armLength}
+										class="w-full rounded-xl border-2 border-slate-200 p-2.5 font-sniglet text-xs focus:border-lime-500 focus:ring-0"
+									/>
+									{#if errors.armLength}
+										<p class="mt-1 font-sniglet text-xs text-red-500">{errors.armLength}</p>
+									{/if}
 								</div>
-								{#if errors.attachmentStyle}
-									<p class="mt-1 font-sniglet text-xs text-red-500">{errors.attachmentStyle}</p>
-								{/if}
-							</div>
 
-							<!-- Length -->
-							<div data-error={!!errors.sleeveLength}>
-								<span class="mb-1 block font-sniglet text-sm font-bold text-slate-700">
-									Length <span class="text-red-500">*</span>
-								</span>
-								<div class="grid grid-cols-1 gap-2">
-									{#each ['Bicep-Length', 'Full Shoulder-Length'] as ArmSleeveLength[] as len}
-										<label
-											class={[
-												'flex cursor-pointer items-center gap-2 rounded-xl border-2 p-2.5 font-sniglet text-xs font-bold transition-all',
-												form.armSleeves.length === len
-													? 'border-lime-500 bg-lime-50 text-lime-800'
-													: 'border-slate-200 text-slate-600 hover:border-slate-300'
-											]}
-										>
-											<input
-												type="radio"
-												name="armSleeveLength"
-												value={len}
-												checked={form.armSleeves.length === len}
-												onchange={() => {
-													form.armSleeves.length = len;
-													delete errors.sleeveLength;
-												}}
-												class="sr-only"
-											/>
-											<span
-												class={[
-													'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-xs',
-													form.armSleeves.length === len
-														? 'border-lime-600 bg-lime-500 text-white'
-														: 'border-slate-300'
-												]}
-											>
-												{#if form.armSleeves.length === len}✓{/if}
-											</span>
-											{len}
-										</label>
-									{/each}
+								<div data-error={!!errors.upperArmCircumference}>
+									<label
+										for="input-upper-arm"
+										class="mb-1 block font-sniglet text-xs font-bold text-slate-600"
+									>
+										Upper Arm Circumference (cm) <span class="text-red-500">*</span>
+									</label>
+									<input
+										id="input-upper-arm"
+										type="number"
+										min="15"
+										max="70"
+										step="0.5"
+										placeholder="e.g. 30"
+										bind:value={form.armSleeves.upperArmCircumference}
+										oninput={() => delete errors.upperArmCircumference}
+										class="w-full rounded-xl border-2 border-slate-200 p-2.5 font-sniglet text-xs focus:border-lime-500 focus:ring-0"
+									/>
+									{#if errors.upperArmCircumference}
+										<p class="mt-1 font-sniglet text-xs text-red-500">
+											{errors.upperArmCircumference}
+										</p>
+									{/if}
 								</div>
-								{#if errors.sleeveLength}
-									<p class="mt-1 font-sniglet text-xs text-red-500">{errors.sleeveLength}</p>
-								{/if}
-							</div>
 
-							<!-- Measurements -->
-							<div class="border-t border-slate-100 pt-2 sm:col-span-2">
-								<h4 class="mb-2 font-sniglet text-sm font-bold text-slate-800">
-									Arm Measurements (required)
-								</h4>
-								<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-									<div data-error={!!errors.armLength}>
-										<label
-											for="input-arm-length"
-											class="mb-1 block font-sniglet text-xs font-bold text-slate-600"
-										>
-											Arm Length (cm) <span class="text-red-500">*</span>
-										</label>
-										<input
-											id="input-arm-length"
-											type="number"
-											min="20"
-											max="100"
-											step="0.5"
-											placeholder="e.g. 55"
-											bind:value={form.armSleeves.armLength}
-											oninput={() => delete errors.armLength}
-											class="w-full rounded-xl border-2 border-slate-200 p-2.5 font-sniglet text-xs focus:border-lime-500 focus:ring-0"
-										/>
-										{#if errors.armLength}
-											<p class="mt-1 font-sniglet text-xs text-red-500">{errors.armLength}</p>
-										{/if}
-									</div>
-
-									<div data-error={!!errors.upperArmCircumference}>
-										<label
-											for="input-upper-arm"
-											class="mb-1 block font-sniglet text-xs font-bold text-slate-600"
-										>
-											Upper Arm Circumference (cm) <span class="text-red-500">*</span>
-										</label>
-										<input
-											id="input-upper-arm"
-											type="number"
-											min="15"
-											max="70"
-											step="0.5"
-											placeholder="e.g. 30"
-											bind:value={form.armSleeves.upperArmCircumference}
-											oninput={() => delete errors.upperArmCircumference}
-											class="w-full rounded-xl border-2 border-slate-200 p-2.5 font-sniglet text-xs focus:border-lime-500 focus:ring-0"
-										/>
-										{#if errors.upperArmCircumference}
-											<p class="mt-1 font-sniglet text-xs text-red-500">
-												{errors.upperArmCircumference}
-											</p>
-										{/if}
-									</div>
-
-									<div data-error={!!errors.wristWidth}>
-										<label
-											for="input-wrist-width"
-											class="mb-1 block font-sniglet text-xs font-bold text-slate-600"
-										>
-											Wrist Width (cm) <span class="text-red-500">*</span>
-										</label>
-										<input
-											id="input-wrist-width"
-											type="number"
-											min="10"
-											max="40"
-											step="0.5"
-											placeholder="e.g. 17"
-											bind:value={form.armSleeves.wristWidth}
-											oninput={() => delete errors.wristWidth}
-											class="w-full rounded-xl border-2 border-slate-200 p-2.5 font-sniglet text-xs focus:border-lime-500 focus:ring-0"
-										/>
-										{#if errors.wristWidth}
-											<p class="mt-1 font-sniglet text-xs text-red-500">{errors.wristWidth}</p>
-										{/if}
-									</div>
+								<div data-error={!!errors.wristWidth}>
+									<label
+										for="input-wrist-width"
+										class="mb-1 block font-sniglet text-xs font-bold text-slate-600"
+									>
+										Wrist Width (cm) <span class="text-red-500">*</span>
+									</label>
+									<input
+										id="input-wrist-width"
+										type="number"
+										min="10"
+										max="40"
+										step="0.5"
+										placeholder="e.g. 17"
+										bind:value={form.armSleeves.wristWidth}
+										oninput={() => delete errors.wristWidth}
+										class="w-full rounded-xl border-2 border-slate-200 p-2.5 font-sniglet text-xs focus:border-lime-500 focus:ring-0"
+									/>
+									{#if errors.wristWidth}
+										<p class="mt-1 font-sniglet text-xs text-red-500">{errors.wristWidth}</p>
+									{/if}
 								</div>
 							</div>
 						</div>
@@ -1378,7 +1223,108 @@
 						{/if}
 					</div>
 
-					<!-- 3. Fur Color Count -->
+					<!-- 3. Fur Type -->
+					<div data-error={!!errors.furType}>
+						<div class="mb-1 flex items-baseline justify-between">
+							<span class="font-sniglet text-sm font-bold text-slate-700">
+								Fur Type <span class="text-red-500">*</span>
+							</span>
+							<span class="font-sniglet text-xs text-slate-400">
+								(Does not change the estimate; priced manually)
+							</span>
+						</div>
+						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+							<!-- Local faux fur -->
+							<label
+								class={[
+									'flex cursor-pointer items-center justify-between rounded-xl border-2 p-3 font-sniglet text-sm font-bold transition-all',
+									form.general.furType === 'Local faux fur'
+										? 'border-lime-500 bg-lime-50 text-lime-800 shadow-sm'
+										: 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+								]}
+							>
+								<input
+									type="radio"
+									name="furType"
+									value="Local faux fur"
+									checked={form.general.furType === 'Local faux fur'}
+									onchange={() => {
+										form.general.furType = 'Local faux fur';
+										delete errors.furType;
+									}}
+									class="sr-only"
+								/>
+								<div class="flex flex-col">
+									<span>Local faux fur</span>
+									<span class="text-xs font-normal text-slate-500">Standard domestic faux fur</span>
+								</div>
+								<span
+									class={[
+										'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-xs',
+										form.general.furType === 'Local faux fur'
+											? 'border-lime-600 bg-lime-500 text-white'
+											: 'border-slate-300'
+									]}
+								>
+									{#if form.general.furType === 'Local faux fur'}✓{/if}
+								</span>
+							</label>
+
+							<!-- Imported furs -->
+							<label
+								class={[
+									'flex items-center justify-between rounded-xl border-2 p-3 font-sniglet text-sm font-bold transition-all',
+									form.commissionPackage === 'per_parts'
+										? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 opacity-60'
+										: form.general.furType === 'Imported furs'
+											? 'cursor-pointer border-lime-500 bg-lime-50 text-lime-800 shadow-sm'
+											: 'cursor-pointer border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+								]}
+							>
+								<input
+									type="radio"
+									name="furType"
+									value="Imported furs"
+									disabled={form.commissionPackage === 'per_parts'}
+									checked={form.general.furType === 'Imported furs'}
+									onchange={() => {
+										if (form.commissionPackage !== 'per_parts') {
+											form.general.furType = 'Imported furs';
+											delete errors.furType;
+										}
+									}}
+									class="sr-only"
+								/>
+								<div class="flex flex-col">
+									<span>Imported furs</span>
+									{#if form.commissionPackage === 'per_parts'}
+										<span class="text-xs font-normal text-amber-600">
+											Only available for Partial and Mini Partial
+										</span>
+									{:else}
+										<span class="text-xs font-normal text-slate-500"
+											>Premium luxury imported fur</span
+										>
+									{/if}
+								</div>
+								<span
+									class={[
+										'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-xs',
+										form.general.furType === 'Imported furs'
+											? 'border-lime-600 bg-lime-500 text-white'
+											: 'border-slate-300'
+									]}
+								>
+									{#if form.general.furType === 'Imported furs'}✓{/if}
+								</span>
+							</label>
+						</div>
+						{#if errors.furType}
+							<p class="mt-1 font-sniglet text-xs text-red-500">{errors.furType}</p>
+						{/if}
+					</div>
+
+					<!-- 4. Fur Color Count -->
 					<div data-error={!!errors.furColorCount}>
 						<div class="mb-1 flex items-baseline justify-between">
 							<span class="font-sniglet text-sm font-bold text-slate-700">
@@ -1418,44 +1364,50 @@
 						{/if}
 					</div>
 
-					<!-- 4. Markings -->
+					<!-- 5. Markings -->
 					<div>
 						<div class="mb-1 flex items-baseline justify-between">
 							<span class="font-sniglet text-sm font-bold text-slate-700">
 								Markings <span class="text-xs font-normal text-slate-400"
-									>(select all that apply, priced manually)</span
+									>(optional, priced manually)</span
 								>
 							</span>
 						</div>
-						<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-							{#each ['Stripes', 'Spots', 'Gradients / Airbrushing', 'Asymmetrical Design'] as Marking[] as marking}
-								<button
-									type="button"
-									onclick={() => toggleMarking(marking)}
+						<div class="grid max-w-md grid-cols-2 gap-3">
+							{#each ['Simple', 'Complex'] as Marking[] as marking}
+								<label
 									class={[
-										'flex cursor-pointer items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left font-sniglet text-xs font-bold transition-all',
-										form.general.markings.includes(marking)
-											? 'border-lime-500 bg-lime-50 text-lime-800'
+										'flex cursor-pointer items-center justify-between rounded-xl border-2 p-3 font-sniglet text-sm font-bold transition-all',
+										form.general.markings === marking
+											? 'border-lime-500 bg-lime-50 text-lime-800 shadow-sm'
 											: 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
 									]}
 								>
+									<input
+										type="radio"
+										name="markings"
+										value={marking}
+										checked={form.general.markings === marking}
+										onchange={() => (form.general.markings = marking)}
+										class="sr-only"
+									/>
+									<span>{marking}</span>
 									<span
 										class={[
-											'flex h-4 w-4 shrink-0 items-center justify-center rounded border text-xs',
-											form.general.markings.includes(marking)
+											'flex h-4 w-4 items-center justify-center rounded-full border text-xs',
+											form.general.markings === marking
 												? 'border-lime-600 bg-lime-500 text-white'
 												: 'border-slate-300'
 										]}
 									>
-										{#if form.general.markings.includes(marking)}✓{/if}
+										{#if form.general.markings === marking}✓{/if}
 									</span>
-									{marking}
-								</button>
+								</label>
 							{/each}
 						</div>
 					</div>
 
-					<!-- 5. Artistic Liberty -->
+					<!-- 6. Artistic Liberty -->
 					<div data-error={!!errors.artisticLiberty}>
 						<span class="mb-1 block font-sniglet text-sm font-bold text-slate-700">
 							Artistic Liberty <span class="text-red-500">*</span>
@@ -1500,7 +1452,7 @@
 						{/if}
 					</div>
 
-					<!-- 6. Contact Details -->
+					<!-- 7. Contact Details -->
 					<div class="space-y-4 border-t border-slate-100 pt-4">
 						<h3 class="font-display text-xl text-slate-800">Contact & Shipping Details</h3>
 
@@ -1581,7 +1533,7 @@
 						</div>
 					</div>
 
-					<!-- 7. Required Checkbox: Age & TOS -->
+					<!-- 8. Required Checkbox: Age & TOS -->
 					<div class="border-t border-slate-100 pt-4" data-error={!!errors.agreeToTerms}>
 						<label class="flex cursor-pointer items-start gap-3">
 							<input

@@ -2,20 +2,13 @@ export type CommissionPackage = 'partial' | 'mini_partial' | 'per_parts';
 
 export type PartType = 'head' | 'paws' | 'tail' | 'arm_sleeves';
 
-export type EyeStyle = '2D Flat Eyes' | '3D Follow-Me Eyes';
-export type MouthType = 'Static Open Mouth' | 'Closed Mouth';
-
 export type FingerCount = '4-Finger' | '5-Finger';
 
 export type TailSize = 'Nub / Small' | 'Standard' | 'Floor-Dragger';
-export type BeltAttachment = 'Elastic Belt Loops' | 'Hidden Nylon Kidney Belt';
-export type TailAddon = 'Squeaker' | 'Removable stuffing zipper/velcro';
 
-export type ArmSleeveAttachment = 'Elastic Shoulder/Back Strap' | 'Fitted Bicep Elastic';
-export type ArmSleeveLength = 'Bicep-Length' | 'Full Shoulder-Length';
-
+export type FurType = 'Local faux fur' | 'Imported furs';
 export type FurColorCount = '1–2' | '3–4' | '5+';
-export type Marking = 'Stripes' | 'Spots' | 'Gradients / Airbrushing' | 'Asymmetrical Design';
+export type Marking = 'Simple' | 'Complex';
 export type ArtisticLiberty =
 	| 'Follow ref strictly'
 	| 'Allow minor adjustments for fur availability';
@@ -23,8 +16,6 @@ export type ArtisticLiberty =
 export type ContactMethod = 'Discord' | 'Telegram' | 'Email';
 
 export interface HeadData {
-	eyeStyle: EyeStyle | '';
-	mouthType: MouthType | '';
 	headAddons?: string;
 	headCircumference: number | '';
 	headHeight: number | '';
@@ -36,13 +27,9 @@ export interface PawsData {
 
 export interface TailData {
 	tailSize: TailSize | '';
-	beltAttachment: BeltAttachment | '';
-	tailAddons: TailAddon[];
 }
 
 export interface ArmSleevesData {
-	attachmentStyle: ArmSleeveAttachment | '';
-	length: ArmSleeveLength | '';
 	armLength: number | '';
 	upperArmCircumference: number | '';
 	wristWidth: number | '';
@@ -53,8 +40,9 @@ export interface GeneralData {
 	refSheetType: 'url' | 'upload';
 	refSheetUrl: string;
 	refSheetFileName?: string;
+	furType: FurType | '';
 	furColorCount: FurColorCount | '';
-	markings: Marking[];
+	markings: Marking | '';
 	artisticLiberty: ArtisticLiberty | '';
 	contactName: string;
 	contactMethod: ContactMethod;
